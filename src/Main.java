@@ -1,53 +1,94 @@
+import java.io.IOException;
+import java.util.Map;
 import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
+        String apiKey = ConfigLoader.obtenerApiKey();
+        if (apiKey == null || apiKey.isBlank()) {
+            System.out.println("API Key no encontrada. Asegúrese de tener config.properties con 'api.key=TU_API_KEY'");
+            return;
+        }
+
+        ApiClient apiClient = new ApiClient(apiKey);
         Scanner scanner = new Scanner(System.in);
 
-        System.out.println("Bienvenido al Conversor de Monedas");
+        Map<String, String> monedasDisponibles;
+        try {
+            monedasDisponibles = apiClient.obtenerMonedas();
+        } catch (IOException | InterruptedException e) {
+            System.out.println("Error al obtener las monedas: " + e.getMessage());
+            return;
+        }
 
-        String monedaOrigen;
-        do {
-            System.out.print("Ingrese la moneda de origen (por ejemplo, USD): ");
-            monedaOrigen = scanner.nextLine().trim().toUpperCase();
-        } while (!esCodigoMonedaValido(monedaOrigen));
+        while (true) {
+            System.out.println("\n===== MENÚ PRINCIPAL =====");
+            System.out.println("1. Ver monedas disponibles");
+            System.out.println("2. Realizar conversión");
+            System.out.println("3. Salir");
+            System.out.print("Seleccione una opción: ");
+            String opcion = scanner.nextLine().trim();
 
-        String monedaDestino;
-        do {
-            System.out.print("Ingrese la moneda de destino (por ejemplo, EUR): ");
-            monedaDestino = scanner.nextLine().trim().toUpperCase();
-        } while (!esCodigoMonedaValido(monedaDestino));
+            switch (opcion) {
+                case "1":
+                    System.out.println("Monedas disponibles:");
+                    monedasDisponibles.forEach((codigo, nombre) ->
+                            System.out.println(codigo + " - " + nombre)
+                    );
+                    break;
 
-        double monto = 0;
-        boolean montoValido = false;
-        while (!montoValido) {
-            System.out.print("Ingrese el monto que desea convertir: ");
-            if (scanner.hasNextDouble()) {
-                monto = scanner.nextDouble();
-                if (monto > 0) {
-                    montoValido = true;
-                } else {
-                    System.out.println("⚠️ El monto debe ser mayor que 0.");
-                }
-            } else {
-                System.out.println("⚠️ Ingrese un número válido.");
-                scanner.next();
+                case "2":
+                    System.out.print("Ingrese moneda de origen (ej. USD): ");
+                    String monedaOrigen = leerMonedaValida(scanner, monedasDisponibles);
+
+                    System.out.print("Ingrese moneda de destino (ej. EUR): ");
+                    String monedaDestino = leerMonedaValida(scanner, monedasDisponibles);
+
+                    double monto = leerMonto(scanner);
+
+                    try {
+                        double resultado = apiClient.realizarConversion(monedaOrigen, monedaDestino, monto);
+                        System.out.printf("%.2f %s equivalen a %.2f %s%n",
+                                monto, monedaOrigen, resultado, monedaDestino);
+                    } catch (IOException | InterruptedException e) {
+                        System.out.println("Error al realizar la conversión: " + e.getMessage());
+                    }
+                    break;
+
+                case "3":
+                    System.out.println("¡Gracias por usar el conversor de monedas!");
+                    return;
+
+                default:
+                    System.out.println("Opción no válida. Intente de nuevo.");
             }
         }
-
-        System.out.println("Datos ingresados:");
-        System.out.println("Moneda origen: " + monedaOrigen);
-        System.out.println("Moneda destino: " + monedaDestino);
-        System.out.println("Monto: " + monto);
-
-        scanner.close();
     }
 
-    public static boolean esCodigoMonedaValido(String codigo) {
-        if (codigo.length() != 3 || !codigo.matches("[A-Z]+")) {
-            System.out.println("Código de moneda inválido. Debe tener 3 letras (ej. USD, EUR).");
-            return false;
+    private static String leerMonedaValida(Scanner scanner, Map<String, String> monedasDisponibles) {
+        String codigo;
+        while (true) {
+            codigo = scanner.nextLine().trim().toUpperCase();
+            if (monedasDisponibles.containsKey(codigo)) {
+                return codigo;
+            }
+            System.out.print("Código inválido. Ingrese un código válido: ");
         }
-        return true;
+    }
+
+    private static double leerMonto(Scanner scanner) {
+        while (true) {
+            System.out.print("Ingrese el monto a convertir: ");
+            if (scanner.hasNextDouble()) {
+                double monto = scanner.nextDouble();
+                scanner.nextLine();
+                if (monto > 0) return monto;
+                else System.out.println("El monto debe ser mayor que 0.");
+            } else {
+                System.out.println("Ingrese un número válido.");
+                scanner.nextLine();
+            }
+        }
     }
 }
+

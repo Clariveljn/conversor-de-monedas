@@ -2,6 +2,8 @@
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
+*.iml
+.idea/
 
 ### Eclipse ###
 .apt_generated
@@ -25,5 +27,5 @@ bin/
 ### VS Code ###
 .vscode/
 
-### Mac OS ###
-.DS_Store
+# Archivos de configuración sensibles
+config.properties
