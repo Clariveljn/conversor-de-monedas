@@ -82,4 +82,3 @@ public class ApiClient {
         return ((Number) data.get("conversion_result")).doubleValue();
     }
 }
-
